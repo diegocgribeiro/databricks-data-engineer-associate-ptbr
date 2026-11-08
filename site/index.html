@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>DE Associate PT-BR</title>
+  <meta name="description" content="Estudo e exercícios para a certificação Databricks Certified Data Engineer Associate — conteúdo em português, questões em inglês, com caderno de erros, pontos fracos e revisão espaçada.">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%234f46e5'/%3E%3Cpath d='M16 22l16-9 16 9-16 9z' fill='%23fff'/%3E%3Cpath d='M16 32l16 9 16-9M16 42l16 9 16-9' stroke='%23fff' stroke-width='4' fill='none' stroke-linejoin='round'/%3E%3C/svg%3E">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <a class="skip" href="#main">Pular para o conteúdo</a>
+  <div class="layout">
+    <aside class="sidebar" id="sidebar">
+      <div class="brand">
+        <svg viewBox="0 0 64 64" width="32" height="32" aria-hidden="true"><rect width="64" height="64" rx="14" fill="currentColor"/><path d="M16 22l16-9 16 9-16 9z" fill="#fff"/><path d="M16 32l16 9 16-9M16 42l16 9 16-9" stroke="#fff" stroke-width="4" fill="none" stroke-linejoin="round"/></svg>
+        <div>
+          <strong>DE Associate</strong>
+          <small>Estudo PT-BR · Questões EN</small>
+        </div>
+      </div>
+      <nav class="nav" aria-label="Principal">
+        <a href="#/" data-route="painel"><span>📊</span> Painel</a>
+        <a href="#/estudar" data-route="estudar"><span>📚</span> Estudar</a>
+        <a href="#/praticar" data-route="praticar"><span>🎯</span> Praticar</a>
+        <a href="#/revisao" data-route="revisao"><span>🔁</span> Revisão inteligente <em class="badge" id="badge-due" hidden></em></a>
+        <a href="#/erros" data-route="erros"><span>📕</span> Caderno de erros <em class="badge danger" id="badge-errors" hidden></em></a>
+        <a href="#/simulados" data-route="simulados"><span>⏱️</span> Simulados</a>
+        <a href="#/estatisticas" data-route="estatisticas"><span>📈</span> Estatísticas</a>
+        <a href="#/config" data-route="config"><span>⚙️</span> Dados e ajustes</a>
+      </nav>
+      <div class="sidebar-foot">
+        <button class="btn ghost small" id="theme-toggle" type="button">🌓 Tema</button>
+        <a class="muted small" href="https://github.com/kengio/databricks-certification-study-guide" target="_blank" rel="noopener">Baseado no guia de kengio (MIT)</a>
+      </div>
+    </aside>
+    <header class="topbar">
+      <button class="btn ghost" id="menu-toggle" type="button" aria-label="Abrir menu" aria-expanded="false">☰</button>
+      <strong>DE Associate PT-BR</strong>
+      <span class="topbar-timer" id="topbar-timer" hidden></span>
+    </header>
+    <main id="main" class="main" tabindex="-1"></main>
+  </div>
+  <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
+
+  <script src="data/questions.js"></script>
+  <script src="data/lessons.js"></script>
+  <script src="js/md.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
