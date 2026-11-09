@@ -28,7 +28,7 @@ Material completo para a certificação **Databricks Certified Data Engineer Ass
 | **Anotações e ⭐** | Escreva notas pessoais e marque questões para revisar |
 | **Backup** | Exporte/importe seu progresso (fica salvo só no seu navegador) |
 
-Atalhos no quiz: `1`–`4` ou `A`–`D` escolhem, `Enter` responde/avança, `F` marca no simulado.
+As alternativas são embaralhadas a cada vez que a questão aparece (letras sempre A, B, C, D… em ordem). Atalhos no quiz: `1`–`9` ou a letra escolhem, `Enter` responde/avança, `F` marca no simulado.
 
 ## Estrutura do repositório
 

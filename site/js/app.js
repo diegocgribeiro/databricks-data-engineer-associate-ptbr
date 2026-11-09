@@ -58,6 +58,23 @@
   function barClass(acc) { return acc == null ? "" : acc >= TARGET ? "ok" : acc >= 0.5 ? "warn" : "bad"; }
   function domainName(id) { return DOMAIN[id] ? DOMAIN[id].namePt : id; }
   function cleanTitle(t) { return String(t || "").replace(/\s*\*?\(2026 blueprint\)\*?/i, "").trim(); }
+  // ---- Ordem das alternativas (embaralhadas a cada sessão) ----
+  const LETTERS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+  let activeOrders = {};
+  function orderOf(q) {
+    const keys = Object.keys(q.choices); const o = activeOrders[q.id];
+    return o && o.length === keys.length && o.every(k => keys.includes(k)) ? o : keys;
+  }
+  function L(q, key) { const i = orderOf(q).indexOf(key); return i < 0 ? key : LETTERS[i]; }
+  const letterTag = (x) => `<span class="notranslate" translate="no">${x}</span>`;
+  function makeOrders(ids) { const o = {}; ids.forEach(id => { if (Q[id]) o[id] = shuffle(Object.keys(Q[id].choices)); }); return o; }
+  function remapLetters(q, text) {
+    const keys = Object.keys(q.choices);
+    if (!text || orderOf(q).every((k, i) => k === keys[i])) return text;
+    return text
+      .replace(/\b(Options?|options?|Choices?|choices?|Answers?|answers?) \(?([A-H])\)?(?!\w)/g, (m, w, k) => keys.includes(k) ? `${w} ${L(q, k)}` : m)
+      .replace(/(^|[\s(])([A-H])( is| and| or|\))(?=\s)/g, (m, pre, k, post) => keys.includes(k) ? pre + L(q, k) + post : m);
+  }
   function isBlueprint(q) { return /2026 blueprint/i.test(q.title || ""); }
   function domainShort(id) { const d = DOMAIN[id]; return d ? d.folder.slice(0, 2) + " · " + d.namePt : id; }
 
@@ -244,7 +261,7 @@
   // ======================================================================
   function startPractice(opts) {
     if (!opts.ids || !opts.ids.length) { toast("Nenhuma questão encontrada com esses filtros."); return; }
-    session = { kind: "practice", mode: opts.mode || "pratica", label: opts.label || "Prática", ids: opts.ids, idx: 0, answers: {}, started: now() };
+    session = { kind: "practice", mode: opts.mode || "pratica", label: opts.label || "Prática", ids: opts.ids, idx: 0, answers: {}, orders: makeOrders(opts.ids), started: now() };
     persistSession();
     location.hash = "#/sessao";
     if (location.hash === "#/sessao") route();
@@ -252,7 +269,7 @@
   function startExam(kind) {
     const ids = examIds(kind);
     const label = kind === "simulado-1" ? "Simulado 1" : kind === "simulado-2" ? "Simulado 2" : "Simulado aleatório ponderado";
-    session = { kind: "exam", bank: kind, label, ids, idx: 0, answers: {}, flags: {}, started: now(), limit: 90 * 60000 };
+    session = { kind: "exam", bank: kind, label, ids, idx: 0, answers: {}, flags: {}, orders: makeOrders(ids), started: now(), limit: 90 * 60000 };
     persistSession();
     location.hash = "#/sessao";
     if (location.hash === "#/sessao") route();
@@ -266,6 +283,7 @@
 
   function route() {
     clearInterval(timerHandle); timerHandle = null;
+    activeOrders = {};
     $("#topbar-timer").hidden = true;
     const h = location.hash.replace(/^#\/?/, "");
     const [name, ...rest] = h.split("/");
@@ -600,13 +618,13 @@
 
   function questionReviewBody(q, chosen) {
     return `<div class="q-text">${MD.render(q.question)}</div>
-      <div class="choices">${Object.entries(q.choices).map(([k, v]) => `
-        <div class="choice ${k === q.answer ? "correct" : k === chosen ? "wrong" : ""}" style="cursor:default"><span class="letter">${k}</span><span class="ctext">${MD.inline(v)}</span></div>`).join("")}</div>
+      <div class="choices">${orderOf(q).map((k, i) => `
+        <div class="choice ${k === q.answer ? "correct" : k === chosen ? "wrong" : ""}" style="cursor:default"><span class="letter notranslate" translate="no">${LETTERS[i]}</span><span class="ctext">${MD.inline(q.choices[k])}</span></div>`).join("")}</div>
       ${explainBlock(q, chosen)}`;
   }
 
   function translateUrl(q) {
-    const text = [q.question, ...Object.entries(q.choices).map(([k, v]) => `${k}) ${v}`), "", "Answer: " + q.answer, q.short, q.explanation].join("\n");
+    const text = [q.question, ...orderOf(q).map((k, i) => `${LETTERS[i]}) ${q.choices[k]}`), "", "Answer: " + L(q, q.answer), remapLetters(q, q.short), remapLetters(q, q.explanation)].join("\n");
     return "https://translate.google.com/?sl=en&tl=pt&op=translate&text=" + encodeURIComponent(text.slice(0, 4800));
   }
 
@@ -619,9 +637,9 @@
     const note = (S.q[q.id] && S.q[q.id].note) || "";
     return `<div class="explain-wrap">
       <div class="feedback ${chosen == null ? "" : chosen === q.answer ? "ok" : "bad"}">
-        <div class="verdict">Resposta correta: ${q.answer}</div>
-        <div class="explain">${MD.render(q.short || "")}${q.explanation ? MD.render(q.explanation) : ""}</div>
-        ${att.length ? `<div class="history-line">Histórico: ${att.length} tentativa(s), ${wc} erro(s)${common ? ` · alternativa errada que você mais escolhe: <strong>${common[0]}</strong>` : ""}.</div>` : ""}
+        <div class="verdict">Resposta correta: ${letterTag(L(q, q.answer))}</div>
+        <div class="explain">${MD.render(remapLetters(q, q.short || ""))}${q.explanation ? MD.render(remapLetters(q, q.explanation)) : ""}</div>
+        ${att.length ? `<div class="history-line">Histórico: ${att.length} tentativa(s), ${wc} erro(s)${common ? ` · alternativa errada que você mais escolhe: <strong>“${MD.inline(q.choices[common[0]] || common[0])}”</strong>` : ""}.</div>` : ""}
         <div class="btn-row" style="margin-top:12px">
           ${lesson ? `<a class="btn small secondary" href="#/aula/${encodeURIComponent(lesson.id)}">📖 Estudar: ${esc(lesson.title)}</a>` : ""}
           ${related ? `<a class="btn small ghost" href="#/aula/${encodeURIComponent(related.id)}">📖 Ver também: ${esc(related.title)}</a>` : ""}
@@ -649,6 +667,8 @@
   let pendingChoice = null, pendingConf = "certeza";
   function viewSession() {
     if (!session) { main().innerHTML = `<div class="empty card"><div class="big">🎯</div>Nenhuma sessão em andamento. <a href="#/praticar">Começar uma prática</a> ou <a href="#/simulados">um simulado</a>.</div>`; return; }
+    if (!session.orders) { session.orders = makeOrders(session.ids); persistSession(); }
+    activeOrders = session.orders;
     if (session.kind === "exam") return renderExamQuestion();
     if (session.idx >= session.ids.length) return renderPracticeSummary();
     renderPracticeQuestion();
@@ -673,11 +693,11 @@
   }
 
   function choicesHtml(q, chosen, revealed) {
-    return `<div class="choices" role="radiogroup">${Object.entries(q.choices).map(([k, v]) => {
+    return `<div class="choices" role="radiogroup">${orderOf(q).map((k, i) => { const v = q.choices[k];
       let cls = "";
       if (revealed) { if (k === q.answer) cls = "correct"; else if (k === chosen) cls = "wrong"; }
       else if (k === chosen) cls = "selected";
-      return `<button type="button" class="choice ${cls}" data-choice="${k}" role="radio" aria-checked="${k === chosen}" ${revealed ? "disabled" : ""}><span class="letter">${k}</span><span class="ctext">${MD.inline(v)}</span></button>`;
+      return `<button type="button" class="choice ${cls}" data-choice="${k}" role="radio" aria-checked="${k === chosen}" ${revealed ? "disabled" : ""}><span class="letter notranslate" translate="no">${LETTERS[i]}</span><span class="ctext">${MD.inline(v)}</span></button>`;
     }).join("")}</div>`;
   }
 
@@ -725,7 +745,7 @@
 
   function feedbackHtml(q, ans) {
     const ok = ans.ok;
-    return `<div class="feedback ${ok ? "ok" : "bad"}"><div class="verdict">${ok ? (ans.conf === "chute" ? "✔ Acertou — mas foi no chute, vai voltar amanhã" : "✔ Correto!") : `✘ Incorreto — você marcou ${ans.c}, a correta é ${q.answer}`}</div></div>${explainBlock(q, ans.c).replace('<div class="feedback ' + (ans.c === q.answer ? "ok" : "bad") + '">', '<div class="feedback" style="margin-top:10px">')}`;
+    return `<div class="feedback ${ok ? "ok" : "bad"}"><div class="verdict">${ok ? (ans.conf === "chute" ? "✔ Acertou — mas foi no chute, vai voltar amanhã" : "✔ Correto!") : `✘ Incorreto — você marcou ${letterTag(L(q, ans.c))}, a correta é ${letterTag(L(q, q.answer))}`}</div></div>${explainBlock(q, ans.c).replace('<div class="feedback ' + (ans.c === q.answer ? "ok" : "bad") + '">', '<div class="feedback" style="margin-top:10px">')}`;
   }
 
   function bindPractice(q) {
@@ -838,7 +858,7 @@
       answers[id] = a ? a.c : null;
       byDomain[q.domain] = byDomain[q.domain] || { ok: 0, n: 0 }; byDomain[q.domain].n++; if (ok) byDomain[q.domain].ok++;
     }
-    const rec = { id: "e" + now().toString(36), bank: session.bank, label: session.label, start: session.started, end, total: session.ids.length, correct, byDomain, answers, flags: session.flags, timeout };
+    const rec = { id: "e" + now().toString(36), bank: session.bank, label: session.label, start: session.started, end, total: session.ids.length, correct, byDomain, answers, flags: session.flags, orders: session.orders, timeout };
     S.exams.push(rec); persist();
     session = null; persistSession();
     if (timeout) toast("Tempo esgotado! Simulado entregue automaticamente.");
@@ -847,6 +867,7 @@
 
   function viewExamResult(id) {
     const e = S.exams.find(x => x.id === id);
+    activeOrders = (e && e.orders) || {};
     if (!e) { main().innerHTML = `<div class="empty card">Simulado não encontrado. <a href="#/simulados">Voltar</a></div>`; return; }
     const p = e.correct / e.total;
     const ids = Object.keys(e.answers);
@@ -1002,8 +1023,11 @@
     if (/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement.tagName)) return;
     if (e.ctrlKey || e.metaKey || e.altKey) return;
     const k = e.key.toLowerCase();
-    const map = { "1": "A", "2": "B", "3": "C", "4": "D", a: "A", b: "B", c: "C", d: "D" };
-    if (map[k]) { const btn = $(`[data-choice="${map[k]}"]`); if (btn && !btn.disabled) { btn.click(); e.preventDefault(); } }
+    let pos = -1;
+    if (/^[1-9]$/.test(k)) pos = +k - 1;
+    else if (k.length === 1 && LETTERS.toLowerCase().includes(k) && !(k === "f" && session.kind === "exam")) pos = LETTERS.toLowerCase().indexOf(k);
+    const btns = $$("[data-choice]");
+    if (pos >= 0 && btns[pos]) { if (!btns[pos].disabled) { btns[pos].click(); e.preventDefault(); } }
     else if (k === "enter") { const b = $("#submit:not(:disabled)") || $("#next"); if (b) { b.click(); e.preventDefault(); } }
     else if (k === "f" && session.kind === "exam") { const b = $("#flag"); if (b) b.click(); }
     else if (k === "arrowright" && session.kind === "exam") { const b = $("#next"); if (b) b.click(); }
